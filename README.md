@@ -4,6 +4,8 @@ This is the project which provides options to query chain and anchor extrinsic t
 
 ## APIs
 
+Ideally, client should serialize the request, and api service should deserialize this. (Refer [here](https://github.com/polkadot-js/api/issues/4655#issuecomment-1086538769) for how to get this done for Substrate's `SubmittableExtrinsic` response).
+
 ### Submit
 
 POST: /api/v1/extrinsics
