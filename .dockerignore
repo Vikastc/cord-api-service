@@ -1,0 +1,11 @@
+.git
+backend/node_modules
+backend/dist
+ui/node_modules
+ui/build
+templates_vol
+sessions
+storage
+verification
+ui_demo
+recordstore_pg
