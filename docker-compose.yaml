@@ -20,14 +20,13 @@ services:
       - TYPEORM_MIGRATIONS_DIR=${STUDIO_TYPEORM_MIGRATIONS_DIR}
       - TYPEORM_SUBSCRIBERS_DIR=${STUDIO_TYPEORM_SUBSCRIBERS_DIR}
       - TYPEORM_LOGGING=${STUDIO_TYPEORM_LOGGING}
-      - CORD_WSS_URL=ws://cord4:9944
+      - CORD_WSS_URL=ws://172.20.0.1:9944
       - ANCHOR_URI=${ANCHOR_URI}
       - DEBUG=*
     ports:
       - ${AGENT_PORT}:${AGENT_PORT}
     depends_on:
       - postgres8
-      - cord4
     networks:
       - local8
     command: npm run prod
@@ -47,16 +46,6 @@ services:
       - postgres-data8:/var/lib/postgresql/data
     networks:
       - local8
-
-  cord4:
-    image: dhiway/cord:dev-0.8.0
-    container_name: cord4
-    ports:
-      - 9955:9944
-    restart: always
-    networks:
-      - local8
-    command: --dev --unsafe-ws-external --unsafe-rpc-external
 
 volumes:
   postgres-data8:
