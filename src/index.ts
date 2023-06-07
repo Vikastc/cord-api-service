@@ -1,16 +1,11 @@
 import fs from 'fs';
 import express from 'express';
-import { createConnection } from 'typeorm';
-import multer from 'multer';
-import HandleBars from 'handlebars';
-import { v4 as uuidv4 } from 'uuid';
 
 import { setupDidAndIdentities } from './init';
 import { app, server } from './server';
 import { authSignup, authSubmit, authLoginCheck } from './auth_controller';
 import { postExtrinsic, queryIdentifiers } from './cord';
 
-import { dbConfig } from './dbconfig';
 const {
     PORT,
     MNEMONIC,
@@ -60,7 +55,6 @@ async function main() {
         );
         return;
     }
-    createConnection(dbConfig);
 
     server.listen(parseInt(PORT, 10), () => {
         console.log(`Dhiway gateway is running at http://localhost:${PORT}`);

@@ -1,12 +1,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import express from 'express';
-import { getConnection } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import * as Cord from '@cord.network/sdk';
 
 import { io } from './server';
-import { User } from './entity/User';
-import { Session } from './entity/Session';
 import { sessionStore } from './server';
 
 const { AGENT_URL } = process.env;

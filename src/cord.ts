@@ -1,30 +1,41 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import express from 'express';
-import { getConnection } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import * as Cord from '@cord.network/sdk';
 
-import { io } from './server';
-import { User } from './entity/User';
-import { Session } from './entity/Session';
-import { sessionStore } from './server';
+import { authorIdentity, setupDidAndIdentities, submitSignedTx } from './init';
 
-import { authorIdentity, setupDidAndIdentities } from './init';
+export async function postExtrinsic(
+    req: express.Request,
+    res: express.Response
+) {
+    try {
+        if (!authorIdentity) {
+            await setupDidAndIdentities();
+        }
 
-export async function postExtrinsic(req: express.Request, res: express.Response) {
-    if (!authorIdentity) {
-	await setupDidAndIdentities();
+        const api = Cord.ConfigService.get('api');
+
+        /* TODO: authentication check */
+
+        const data = req.body;
+        //const extrinsic = Buffer.from(data.message, 'base64');
+
+        // const response = await Cord.Chain.signAndSubmitTx(
+        //     extrinsic,
+        //     authorIdentity
+        // );
+
+        const extrinsic = api.tx(data.extrinsic);
+        // Signing the tx
+        const signedTx = await extrinsic.signAsync(authorIdentity, { nonce: -1 });
+        // Submitting the tx
+        const response = await submitSignedTx(signedTx);
+
+        return res.json({ response });
+    } catch (error) {
+        console.log('error: ', error);
+        return res.json({ err: error });
     }
-    const api = Cord.ConfigService.get('api');
-
-    /* TODO: authentication check */
-    
-    const data = req.body;
-    //const extrinsic = Buffer.from(data.message, 'base64');
-    const extrinsic = api.tx(data.extrinsic);
-    const response = await Cord.Chain.signAndSubmitTx(extrinsic, authorIdentity);
-    
-    return res.json({ response });
 }
 
 async function getDID(uri: string) {
@@ -43,11 +54,10 @@ export async function queryIdentifiers(
     req: express.Request,
     res: express.Response
 ) {
-
     /* Depending on the type of identifier, query corresponding pallets */
     if (req.query.did) {
-	return res.json({ did: await getDID(req.params.identifier)});
+        return res.json({ did: await getDID(req.params.identifier) });
     }
 
-    res.json({msg: "enosys"})
+    res.json({ msg: 'enosys' });
 }

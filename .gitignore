@@ -32,3 +32,5 @@ src/default-limits.json
 
 templates/package*json
 ui/public/templates/*
+
+settings.json
