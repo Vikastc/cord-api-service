@@ -2,6 +2,15 @@ import * as Cord from '@cord.network/sdk';
 import { Crypto } from '@cord.network/utils';
 
 import { ConfigService } from '@cord.network/config';
+import type { AccountId32, Hash } from '@polkadot/types/interfaces';
+import type { Option } from '@polkadot/types';
+import { BN, u8aToString } from '@polkadot/util';
+import type {
+    RawDidLinkedInfo,
+    PalletDidDidDetails,
+    PalletDidDidDetailsDidPublicKeyDetails,
+    PalletDidServiceEndpointsDidEndpoint,
+} from '@cord.network/augment-api';
 import {
     blake2AsU8a,
     keyExtractPath,
@@ -11,9 +20,8 @@ import {
     sr25519PairFromSeed,
 } from '@polkadot/util-crypto';
 
-import { SDKErrors } from '@cord.network/utils'
-import { SubmittableResult } from '@polkadot/api'
-
+import { SDKErrors, DataUtils, ss58Format } from '@cord.network/utils';
+import { SubmittableResult } from '@polkadot/api';
 
 import { ErrorHandler } from './chain/errorhandling';
 
@@ -21,13 +29,54 @@ import type {
     ISubmittableResult,
     SubmittableExtrinsic,
     SubscriptionPromise,
+    DidUri,
+    CordAddress,
+    DidDocument,
+    DidKey,
+    DidVerificationKey,
+    DidEncryptionKey,
+    DidServiceEndpoint,
 } from '@cord.network/types';
+
+import { DidResourceUri, UriFragment } from '@cord.network/types';
+
 import { makeSubscriptionPromise } from './chain/SubscriptionPromise';
+
+export type DidName = string;
 
 const { CORD_WSS_URL, MNEMONIC, ANCHOR_URI } = process.env;
 
-const log = ConfigService.LoggingFactory.getLogger('Chain')
+const CORD_DID_REGEX =
+    /^did:cord:(?<address>3[1-9a-km-zA-HJ-NP-Z]{47})(?<fragment>#[^#\n]+)?$/;
 
+type IDidParsingResult = {
+    did: DidUri;
+    version: number;
+    type: 'full';
+    address: CordAddress;
+    fragment?: UriFragment;
+    authKeyTypeEncoding?: string;
+    encodedDetails?: string;
+};
+
+type RpcDocument = Pick<
+    DidDocument,
+    | 'authentication'
+    | 'assertionMethod'
+    | 'capabilityDelegation'
+    | 'keyAgreement'
+> & {
+    lastTxCounter: BN;
+};
+
+export interface DidInfo {
+    document: DidDocument;
+    didName?: DidName;
+}
+
+const DID_LATEST_VERSION = 1;
+
+const log = ConfigService.LoggingFactory.getLogger('Chain');
 
 export let authorIdentity: any = undefined;
 export let issuerDid: any = undefined;
@@ -229,4 +278,150 @@ export async function submitSignedTx(
         unsubscribe();
         api.off('disconnected', handleDisconnect);
     }
+}
+
+export function parse(didUri: DidUri | DidResourceUri): IDidParsingResult {
+    const matches = CORD_DID_REGEX.exec(didUri)?.groups;
+
+    if (matches) {
+        const { version: versionString, fragment } = matches;
+        const address = matches.address as CordAddress;
+        const version = versionString
+            ? parseInt(versionString, 10)
+            : DID_LATEST_VERSION;
+        return {
+            did: didUri.replace(fragment || '', '') as DidUri,
+            version,
+            type: 'full',
+            address,
+            fragment: fragment === '#' ? undefined : (fragment as UriFragment),
+        };
+    }
+
+    throw new SDKErrors.InvalidDidFormatError(didUri);
+}
+
+export function toChain(did: DidUri): CordAddress {
+    return parse(did).address;
+}
+
+function didPublicKeyDetailsFromChain(
+    keyId: Hash,
+    keyDetails: PalletDidDidDetailsDidPublicKeyDetails
+): DidKey {
+    const key = keyDetails.key.isPublicEncryptionKey
+        ? keyDetails.key.asPublicEncryptionKey
+        : keyDetails.key.asPublicVerificationKey;
+    return {
+        id: `#${keyId.toHex()}`,
+        type: key.type.toLowerCase() as DidKey['type'],
+        publicKey: key.value.toU8a(),
+    };
+}
+
+function resourceIdToChain(id: UriFragment): string {
+    return id.replace(/^#/, '')
+  }
+
+function documentFromChain(encoded: PalletDidDidDetails): RpcDocument {
+    const {
+        publicKeys,
+        authenticationKey,
+        assertionKey,
+        delegationKey,
+        keyAgreementKeys,
+        lastTxCounter,
+    } = encoded;
+
+    const keys: Record<string, DidKey> = [...publicKeys.entries()]
+        .map(([keyId, keyDetails]) =>
+            didPublicKeyDetailsFromChain(keyId, keyDetails)
+        )
+        .reduce((res, key) => {
+            res[resourceIdToChain(key.id)] = key;
+            return res;
+        }, {});
+
+    const authentication = keys[
+        authenticationKey.toHex()
+    ] as DidVerificationKey;
+
+    const didRecord: RpcDocument = {
+        authentication: [authentication],
+        lastTxCounter: lastTxCounter.toBn(),
+    };
+
+    if (assertionKey.isSome) {
+        const key = keys[assertionKey.unwrap().toHex()] as DidVerificationKey;
+        didRecord.assertionMethod = [key];
+    }
+    if (delegationKey.isSome) {
+        const key = keys[delegationKey.unwrap().toHex()] as DidVerificationKey;
+        didRecord.capabilityDelegation = [key];
+    }
+
+    const keyAgreementKeyIds = [...keyAgreementKeys.values()].map((keyId) =>
+        keyId.toHex()
+    );
+    if (keyAgreementKeyIds.length > 0) {
+        didRecord.keyAgreement = keyAgreementKeyIds.map(
+            (id) => keys[id] as DidEncryptionKey
+        );
+    }
+
+    return didRecord;
+}
+
+export function getDidUri(didOrAddress: DidUri | CordAddress): DidUri {
+    const address = DataUtils.isCordAddress(didOrAddress)
+        ? didOrAddress
+        : parse(didOrAddress as DidUri).address;
+    return `did:cord:${address}` as DidUri;
+}
+
+function fromChain(encoded: AccountId32): DidUri {
+    return getDidUri(Crypto.encodeAddress(encoded, ss58Format));
+}
+
+function serviceFromChain(
+    encoded: PalletDidServiceEndpointsDidEndpoint
+): DidServiceEndpoint {
+    const { id, serviceTypes, urls } = encoded;
+    return {
+        id: `#${u8aToString(id)}`,
+        type: serviceTypes.map(u8aToString),
+        serviceEndpoint: urls.map(u8aToString),
+    };
+}
+
+function servicesFromChain(
+    encoded: PalletDidServiceEndpointsDidEndpoint[]
+): DidServiceEndpoint[] {
+    return encoded.map((encodedValue) => serviceFromChain(encodedValue));
+}
+
+export function linkedInfoFromChain(
+    encoded: Option<RawDidLinkedInfo>
+): DidInfo {
+    const { identifier, name, serviceEndpoints, details } = encoded.unwrap();
+    const didRec = documentFromChain(details);
+    const did: DidDocument = {
+        uri: fromChain(identifier),
+        authentication: didRec.authentication,
+        assertionMethod: didRec.assertionMethod,
+        capabilityDelegation: didRec.capabilityDelegation,
+        keyAgreement: didRec.keyAgreement,
+    };
+
+    const service = servicesFromChain(serviceEndpoints);
+    if (service.length > 0) {
+        did.service = service;
+    }
+
+    const didName = name.isNone ? undefined : name.unwrap().toHuman();
+
+    return {
+        document: did,
+        didName,
+    };
 }

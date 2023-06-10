@@ -4,7 +4,7 @@ import express from 'express';
 import { setupDidAndIdentities } from './init';
 import { app, server } from './server';
 import { authSignup, authSubmit, authLoginCheck } from './auth_controller';
-import { postExtrinsic, queryIdentifiers } from './cord';
+import { postExtrinsic, queryDid, queryIdentifiers } from './cord';
 
 const {
     PORT,
@@ -32,6 +32,10 @@ app.post('/api/v1/extrinsic', async (req, res) => {
     /* TODO: authentication check */
     /* TODO: add metering */
     return await postExtrinsic(req, res);
+});
+
+app.post('/api/v1/query', async (req, res) => {
+    return await queryDid(req, res);
 });
 
 app.get('/api/v1/query/:identifier', async (req, res) => {

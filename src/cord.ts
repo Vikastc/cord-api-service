@@ -2,7 +2,12 @@
 import express from 'express';
 import * as Cord from '@cord.network/sdk';
 
-import { authorIdentity, setupDidAndIdentities, submitSignedTx } from './init';
+import {
+    authorIdentity,
+    setupDidAndIdentities,
+    submitSignedTx,
+    toChain,
+} from './init';
 
 export async function postExtrinsic(
     req: express.Request,
@@ -27,7 +32,9 @@ export async function postExtrinsic(
 
         const extrinsic = api.tx(data.extrinsic);
         // Signing the tx
-        const signedTx = await extrinsic.signAsync(authorIdentity, { nonce: -1 });
+        const signedTx = await extrinsic.signAsync(authorIdentity, {
+            nonce: -1,
+        });
         // Submitting the tx
         const response = await submitSignedTx(signedTx);
 
@@ -60,4 +67,27 @@ export async function queryIdentifiers(
     }
 
     res.json({ msg: 'enosys' });
+}
+
+export async function queryDid(req: express.Request, res: express.Response) {
+    const data = req.body;
+
+    const api = Cord.ConfigService.get('api');
+    const didUri = data.did;
+
+    try {
+        if (didUri) {
+            const encodedDid = await api.call.did.query(toChain(didUri));
+
+            const { document } = Cord.Did.linkedInfoFromChain(encodedDid);
+
+            if (!document) {
+                throw new Error('DID was not successfully created.');
+            }
+            return res.json(document);
+        }
+    } catch (error) {
+        console.log('err: ', error);
+        return res.json({ err: error });
+    }
 }
