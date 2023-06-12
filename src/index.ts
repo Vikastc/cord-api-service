@@ -1,16 +1,11 @@
-import fs from 'fs';
 import express from 'express';
 
 import { setupDidAndIdentities } from './init';
 import { app, server } from './server';
 import { authSignup, authSubmit, authLoginCheck } from './auth_controller';
-import { postExtrinsic, queryDid, queryIdentifiers } from './cord';
+import { postExtrinsic, query, queryIdentifiers } from './cord';
 
-const {
-    PORT,
-    MNEMONIC,
-    ANCHOR_URI,
-} = process.env;
+const { PORT } = process.env;
 
 const authRouter = express.Router({ mergeParams: true });
 
@@ -34,8 +29,8 @@ app.post('/api/v1/extrinsic', async (req, res) => {
     return await postExtrinsic(req, res);
 });
 
-app.post('/api/v1/query', async (req, res) => {
-    return await queryDid(req, res);
+app.get('/api/v1/query/:module/:identifier', async (req, res) => {
+    return await query(req, res);
 });
 
 app.get('/api/v1/query/:identifier', async (req, res) => {
@@ -43,7 +38,6 @@ app.get('/api/v1/query/:identifier', async (req, res) => {
     /* TODO: add metering */
     return await queryIdentifiers(req, res);
 });
-
 
 // All other routes to React App
 app.get('/*', async (req, res) => {

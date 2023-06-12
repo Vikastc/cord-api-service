@@ -70,25 +70,31 @@ export async function queryIdentifiers(
     res.json({ msg: 'enosys' });
 }
 
-export async function queryDid(req: express.Request, res: express.Response) {
-    const data = req.body;
+export async function query(req: express.Request, res: express.Response) {
+    const module = req.params.module;
+    const identifier = req.params.identifier;
 
     const api = Cord.ConfigService.get('api');
-    const didUri = data.did;
+    if (module === 'did') {
+        try {
+            const didUri = identifier as Cord.DidUri;
 
-    try {
-        if (didUri) {
-            const encodedDid = await api.call.did.query(toChain(didUri));
+            if (didUri) {
+                const encodedDid = await api.call.did.query(toChain(didUri));
 
-            const { document } = linkedInfoFromChain(encodedDid);
+                const { document } = linkedInfoFromChain(encodedDid);
 
-            if (!document) {
-                throw new Error('DID was not successfully created.');
+                if (!document) {
+                    throw new Error('DID was not successfully created.');
+                }
+                return res.json(document);
             }
-            return res.json(document);
+        } catch (error) {
+            console.log('err: ', error);
+            return res.json({ result: 'URL not found' });
         }
-    } catch (error) {
-        console.log('err: ', error);
-        return res.json({ err: error });
+    } else {
+        console.log('Not supported');
+        return res.json({ error: 'module not supported' });
     }
 }
