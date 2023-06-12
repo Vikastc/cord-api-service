@@ -320,8 +320,8 @@ function didPublicKeyDetailsFromChain(
 }
 
 function resourceIdToChain(id: UriFragment): string {
-    return id.replace(/^#/, '')
-  }
+    return id.replace(/^#/, '');
+}
 
 function documentFromChain(encoded: PalletDidDidDetails): RpcDocument {
     const {
@@ -337,7 +337,7 @@ function documentFromChain(encoded: PalletDidDidDetails): RpcDocument {
         .map(([keyId, keyDetails]) =>
             didPublicKeyDetailsFromChain(keyId, keyDetails)
         )
-        .reduce((res, key) => {
+        .reduce((res: Record<string, DidKey>, key) => {
             res[resourceIdToChain(key.id)] = key;
             return res;
         }, {});

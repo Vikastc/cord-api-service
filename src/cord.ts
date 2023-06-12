@@ -4,6 +4,7 @@ import * as Cord from '@cord.network/sdk';
 
 import {
     authorIdentity,
+    linkedInfoFromChain,
     setupDidAndIdentities,
     submitSignedTx,
     toChain,
@@ -79,7 +80,7 @@ export async function queryDid(req: express.Request, res: express.Response) {
         if (didUri) {
             const encodedDid = await api.call.did.query(toChain(didUri));
 
-            const { document } = Cord.Did.linkedInfoFromChain(encodedDid);
+            const { document } = linkedInfoFromChain(encodedDid);
 
             if (!document) {
                 throw new Error('DID was not successfully created.');
