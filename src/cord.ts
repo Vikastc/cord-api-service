@@ -71,30 +71,60 @@ export async function queryIdentifiers(
 }
 
 export async function query(req: express.Request, res: express.Response) {
-    const module = req.params.module;
+    const modules = req.params.module;
     const identifier = req.params.identifier;
 
     const api = Cord.ConfigService.get('api');
-    if (module === 'did') {
-        try {
-            const didUri = identifier as Cord.DidUri;
 
-            if (didUri) {
-                const encodedDid = await api.call.did.query(toChain(didUri));
+    switch (modules) {
+        case 'did':
+            {
+                try {
+                    const didUri = identifier as Cord.DidUri;
 
-                const { document } = linkedInfoFromChain(encodedDid);
+                    if (didUri) {
+                        const encodedDid = await api.call.did.query(
+                            toChain(didUri)
+                        );
 
-                if (!document) {
-                    throw new Error('DID was not successfully created.');
+                        const { document } = linkedInfoFromChain(encodedDid);
+
+                        if (!document) {
+                            throw new Error(
+                                'DID was not successfully created.'
+                            );
+                        }
+                        return res.json(document);
+                    }
+                } catch (error) {
+                    console.log('err: ', error);
+                    return res.json({ error: error });
                 }
-                return res.json(document);
             }
-        } catch (error) {
-            console.log('err: ', error);
-            return res.json({ result: 'URL not found' });
-        }
-    } else {
-        console.log('Not supported');
-        return res.json({ error: 'module not supported' });
+            break;
+
+        case 'stream':
+            {
+                try {
+                    const chainIdentifier = identifier;
+
+                    const streamOnChain = await api.query.stream.streams(
+                        chainIdentifier
+                    );
+
+                    return res.json(streamOnChain);
+                } catch (error) {
+                    console.log('err: ', error);
+                    return res.json({ error: error });
+                }
+            }
+            break;
+
+        default:
+            {
+                console.log('Not supported module');
+                return res.json({ error: 'module not supported' });
+            }
+            break;
     }
 }
