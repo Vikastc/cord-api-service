@@ -9,6 +9,7 @@ import {
     submitSignedTx,
     toChain,
 } from './init';
+import { fromChain } from './helper';
 
 export async function postExtrinsic(
     req: express.Request,
@@ -112,7 +113,9 @@ export async function query(req: express.Request, res: express.Response) {
                         chainIdentifier
                     );
 
-                    return res.json(streamOnChain);
+                    const stream = fromChain(streamOnChain, chainIdentifier);
+
+                    return res.json(stream);
                 } catch (error) {
                     console.log('err: ', error);
                     return res.json({ error: error });
