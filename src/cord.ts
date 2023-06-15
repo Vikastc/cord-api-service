@@ -78,7 +78,7 @@ export async function query(req: express.Request, res: express.Response) {
     const api = Cord.ConfigService.get('api');
 
     switch (modules) {
-        case 'did':
+        case 'encodedDid':
             {
                 try {
                     const didUri = identifier as Cord.DidUri;
@@ -123,6 +123,20 @@ export async function query(req: express.Request, res: express.Response) {
             }
             break;
 
+        case 'did':
+            {
+                try {
+                    const did = identifier as Cord.DidUri;
+
+                    const queried = await api.query.did.did(toChain(did));
+
+                    return res.json(queried);
+                } catch (error) {
+                    console.log('err: ', error);
+                    return res.json({ error: error });
+                }
+            }
+            break;
         default:
             {
                 console.log('Not supported module');
