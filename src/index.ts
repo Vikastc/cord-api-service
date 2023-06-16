@@ -29,7 +29,7 @@ app.post('/api/v1/extrinsic', async (req, res) => {
     return await postExtrinsic(req, res);
 });
 
-app.get('/api/v1/query/:module/:identifier', async (req, res) => {
+app.get('/api/v1/query/:module/:section/:identifier', async (req, res) => {
     return await query(req, res);
 });
 

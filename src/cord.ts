@@ -137,11 +137,41 @@ export async function query(req: express.Request, res: express.Response) {
                 }
             }
             break;
-        default:
+
+        case 'didBlacklist':
             {
-                console.log('Not supported module');
-                return res.json({ error: 'module not supported' });
+                try {
+                    const did = identifier as Cord.DidUri;
+
+                    const isdidDeleted = await api.query.did.didBlacklist(
+                        toChain(did)
+                    );
+
+                    return res.json(isdidDeleted);
+                } catch (error) {
+                    console.log('err: ', error);
+                    return res.json({ error: error });
+                }
             }
             break;
+
+        case 'system':
+            {
+                if (identifier === 'number') {
+                    try {
+                        const number = await api.query.system.number();
+
+                        return res.json(number);
+                    } catch (error) {
+                        console.log('err: ', error);
+                        return res.json({ error: error });
+                    }
+                }
+            }
+            break;
+        default: {
+            console.log('Not supported module');
+            return res.json({ error: 'module not supported' });
+        }
     }
 }
