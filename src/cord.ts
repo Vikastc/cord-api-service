@@ -1,15 +1,15 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import express from 'express';
 import * as Cord from '@cord.network/sdk';
 
+import { authorIdentity, setupDidAndIdentities, submitSignedTx } from './init';
+
 import {
-    authorIdentity,
-    linkedInfoFromChain,
-    setupDidAndIdentities,
-    submitSignedTx,
-    toChain,
-} from './init';
-import { fromChain } from './helper';
+    queryBlacklist,
+    queryDid,
+    queryDidEncoded,
+    queryStream,
+    querySystem,
+} from './query';
 
 export async function postExtrinsic(
     req: express.Request,
@@ -75,100 +75,21 @@ export async function query(req: express.Request, res: express.Response) {
     const modules = req.params.module;
     const identifier = req.params.identifier;
 
-    const api = Cord.ConfigService.get('api');
-
     switch (modules) {
         case 'encodedDid':
-            {
-                try {
-                    const didUri = identifier as Cord.DidUri;
-
-                    if (didUri) {
-                        const encodedDid = await api.call.did.query(
-                            toChain(didUri)
-                        );
-
-                        const { document } = linkedInfoFromChain(encodedDid);
-
-                        if (!document) {
-                            throw new Error(
-                                'DID was not successfully created.'
-                            );
-                        }
-                        return res.json(document);
-                    }
-                } catch (error) {
-                    console.log('err: ', error);
-                    return res.json({ error: error });
-                }
-            }
-            break;
+            return await queryDidEncoded(res, identifier);
 
         case 'stream':
-            {
-                try {
-                    const chainIdentifier = identifier;
-
-                    const streamOnChain = await api.query.stream.streams(
-                        chainIdentifier
-                    );
-
-                    const stream = fromChain(streamOnChain, chainIdentifier);
-
-                    return res.json(stream);
-                } catch (error) {
-                    console.log('err: ', error);
-                    return res.json({ error: error });
-                }
-            }
-            break;
+            return await queryStream(res, identifier);
 
         case 'did':
-            {
-                try {
-                    const did = identifier as Cord.DidUri;
-
-                    const queried = await api.query.did.did(toChain(did));
-
-                    return res.json(queried);
-                } catch (error) {
-                    console.log('err: ', error);
-                    return res.json({ error: error });
-                }
-            }
-            break;
+            return await queryDid(res, identifier);
 
         case 'didBlacklist':
-            {
-                try {
-                    const did = identifier as Cord.DidUri;
-
-                    const isdidDeleted = await api.query.did.didBlacklist(
-                        toChain(did)
-                    );
-
-                    return res.json(isdidDeleted);
-                } catch (error) {
-                    console.log('err: ', error);
-                    return res.json({ error: error });
-                }
-            }
-            break;
+            return await queryBlacklist(res, identifier);
 
         case 'system':
-            {
-                if (identifier === 'number') {
-                    try {
-                        const number = await api.query.system.number();
-
-                        return res.json(number);
-                    } catch (error) {
-                        console.log('err: ', error);
-                        return res.json({ error: error });
-                    }
-                }
-            }
-            break;
+            return await querySystem(res, identifier);
         default: {
             console.log('Not supported module');
             return res.json({ error: 'module not supported' });
