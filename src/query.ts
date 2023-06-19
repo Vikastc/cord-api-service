@@ -40,14 +40,10 @@ export async function queryDid(
                 throw new Error('DID was not successfully created.');
             }
             return res.json(document);
-        }
-
-        if (section === 'did') {
+        } else if (section === 'did') {
             const queried = await api.query.did.did(toChain(did));
             return res.json(queried);
-        }
-
-        if (section === 'didBlacklist') {
+        } else if (section === 'didBlacklist') {
             const isdidDeleted = await api.query.did.didBlacklist(toChain(did));
             return res.json(isdidDeleted);
         }
@@ -83,17 +79,39 @@ export async function queryRegistry(
         if (section === 'registries') {
             const encoded = await api.query.registry.registries(identifier);
             return res.json(encoded);
-        }
-        if (section === 'authorizations') {
+        } else if (section === 'authorizations') {
             const encoded = await api.query.registry.authorizations(identifier);
             return res.json(encoded);
-        }
-        if (section === 'fetchAuthorizations') {
+        } else if (section === 'fetchAuthorizations') {
             const authorizationId = identifier;
             const registryAuthoriation =
                 await api.query.registry.authorizations(authorizationId);
 
             return res.json(registryAuthoriation);
+        }
+    } catch (error) {
+        console.log('err: ', error);
+        return res.json({ error: error });
+    }
+}
+
+export async function querySchema(
+    res: express.Response,
+    identifier: any,
+    section: string
+) {
+    const api = Cord.ConfigService.get('api');
+
+    try {
+        if (section === 'schemas') {
+            const cordSchemaId = identifier;
+            const schemaEntry = await api.query.schema.schemas(cordSchemaId);
+
+            return res.json(schemaEntry);
+        } else if (section === 'fetchSchema') {
+            const encoded = await api.query.schema.schemas(identifier);
+
+            return res.json(encoded);
         }
     } catch (error) {
         console.log('err: ', error);

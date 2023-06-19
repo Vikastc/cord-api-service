@@ -6,6 +6,7 @@ import { authorIdentity, setupDidAndIdentities, submitSignedTx } from './init';
 import {
     queryDid,
     queryRegistry,
+    querySchema,
     queryStream,
     querySystem,
 } from './query';
@@ -87,6 +88,9 @@ export async function query(req: express.Request, res: express.Response) {
 
         case 'registry':
             return await queryRegistry(res, identifier, section);
+
+        case 'schema':
+            return await querySchema(res, identifier, section);
         default: {
             console.log('Not supported module');
             return res.json({ error: 'module not supported' });
