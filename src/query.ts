@@ -4,28 +4,6 @@ import * as Cord from '@cord.network/sdk';
 import { linkedInfoFromChain, toChain } from './init';
 import { fromChain } from './helper';
 
-export async function queryDidEncoded(res: express.Response, identifier: any) {
-    const api = Cord.ConfigService.get('api');
-
-    try {
-        const didUri = identifier as Cord.DidUri;
-
-        if (didUri) {
-            const encodedDid = await api.call.did.query(toChain(didUri));
-
-            const { document } = linkedInfoFromChain(encodedDid);
-
-            if (!document) {
-                throw new Error('DID was not successfully created.');
-            }
-            return res.json(document);
-        }
-    } catch (error) {
-        console.log('err: ', error);
-        return res.json({ error: error });
-    }
-}
-
 export async function queryStream(res: express.Response, identifier: any) {
     const api = Cord.ConfigService.get('api');
 
@@ -43,30 +21,36 @@ export async function queryStream(res: express.Response, identifier: any) {
     }
 }
 
-export async function queryDid(res: express.Response, identifier: any) {
+export async function queryDid(
+    res: express.Response,
+    identifier: any,
+    section: string
+) {
     const api = Cord.ConfigService.get('api');
 
     try {
         const did = identifier as Cord.DidUri;
 
-        const queried = await api.query.did.did(toChain(did));
+        if (section === 'query') {
+            const encodedDid = await api.call.did.query(toChain(did));
 
-        return res.json(queried);
-    } catch (error) {
-        console.log('err: ', error);
-        return res.json({ error: error });
-    }
-}
+            const { document } = linkedInfoFromChain(encodedDid);
 
-export async function queryBlacklist(res: express.Response, identifier: any) {
-    const api = Cord.ConfigService.get('api');
+            if (!document) {
+                throw new Error('DID was not successfully created.');
+            }
+            return res.json(document);
+        }
 
-    try {
-        const did = identifier as Cord.DidUri;
-
-        const isdidDeleted = await api.query.did.didBlacklist(toChain(did));
-
-        return res.json(isdidDeleted);
+        if (section === 'did') {
+            const queried = await api.query.did.did(toChain(did));
+            return res.json(queried);
+        }
+        
+        if (section === 'didBlacklist') {
+            const isdidDeleted = await api.query.did.didBlacklist(toChain(did));
+            return res.json(isdidDeleted);
+        }
     } catch (error) {
         console.log('err: ', error);
         return res.json({ error: error });
@@ -88,13 +72,22 @@ export async function querySystem(res: express.Response, identifier: any) {
     }
 }
 
-export async function queryRegistry(res: express.Response, identifier: any) {
+export async function queryRegistry(
+    res: express.Response,
+    identifier: any,
+    section: string
+) {
+    const api = Cord.ConfigService.get('api');
+
     try {
-        const api = Cord.ConfigService.get('api');
-
-        const encoded = await api.query.registry.registries(identifier);
-
-        return res.json(encoded);
+        if (section === 'registries') {
+            const encoded = await api.query.registry.registries(identifier);
+            return res.json(encoded);
+        }
+        if (section === 'authorizations') {
+            const encoded = await api.query.registry.authorizations(identifier);
+            return res.json(encoded);
+        }
     } catch (error) {
         console.log('err: ', error);
         return res.json({ error: error });

@@ -4,9 +4,7 @@ import * as Cord from '@cord.network/sdk';
 import { authorIdentity, setupDidAndIdentities, submitSignedTx } from './init';
 
 import {
-    queryBlacklist,
     queryDid,
-    queryDidEncoded,
     queryRegistry,
     queryStream,
     querySystem,
@@ -74,26 +72,21 @@ export async function queryIdentifiers(
 
 export async function query(req: express.Request, res: express.Response) {
     const modules = req.params.module;
+    const section = req.params.section;
     const identifier = req.params.identifier;
 
     switch (modules) {
-        case 'encodedDid':
-            return await queryDidEncoded(res, identifier);
-
         case 'stream':
             return await queryStream(res, identifier);
 
         case 'did':
-            return await queryDid(res, identifier);
-
-        case 'didBlacklist':
-            return await queryBlacklist(res, identifier);
+            return await queryDid(res, identifier, section);
 
         case 'system':
             return await querySystem(res, identifier);
 
         case 'registry':
-            return await queryRegistry(res, identifier)
+            return await queryRegistry(res, identifier, section);
         default: {
             console.log('Not supported module');
             return res.json({ error: 'module not supported' });
