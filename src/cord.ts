@@ -7,6 +7,7 @@ import {
     queryBlacklist,
     queryDid,
     queryDidEncoded,
+    queryRegistry,
     queryStream,
     querySystem,
 } from './query';
@@ -90,6 +91,9 @@ export async function query(req: express.Request, res: express.Response) {
 
         case 'system':
             return await querySystem(res, identifier);
+
+        case 'registry':
+            return await queryRegistry(res, identifier)
         default: {
             console.log('Not supported module');
             return res.json({ error: 'module not supported' });

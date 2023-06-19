@@ -87,3 +87,16 @@ export async function querySystem(res: express.Response, identifier: any) {
         }
     }
 }
+
+export async function queryRegistry(res: express.Response, identifier: any) {
+    try {
+        const api = Cord.ConfigService.get('api');
+
+        const encoded = await api.query.registry.registries(identifier);
+
+        return res.json(encoded);
+    } catch (error) {
+        console.log('err: ', error);
+        return res.json({ error: error });
+    }
+}
