@@ -46,7 +46,7 @@ export async function queryDid(
             const queried = await api.query.did.did(toChain(did));
             return res.json(queried);
         }
-        
+
         if (section === 'didBlacklist') {
             const isdidDeleted = await api.query.did.didBlacklist(toChain(did));
             return res.json(isdidDeleted);
@@ -87,6 +87,13 @@ export async function queryRegistry(
         if (section === 'authorizations') {
             const encoded = await api.query.registry.authorizations(identifier);
             return res.json(encoded);
+        }
+        if (section === 'fetchAuthorizations') {
+            const authorizationId = identifier;
+            const registryAuthoriation =
+                await api.query.registry.authorizations(authorizationId);
+
+            return res.json(registryAuthoriation);
         }
     } catch (error) {
         console.log('err: ', error);
