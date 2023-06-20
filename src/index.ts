@@ -23,7 +23,7 @@ authRouter.get('/check', async (req, res) => {
 
 app.use('/api/v1/auth', authRouter);
 
-app.post('/api/v1/extrinsic', async (req, res) => {
+app.post('/api/v1/:module/extrinsic', async (req, res) => {
     /* TODO: authentication check */
     /* TODO: add metering */
     return await postExtrinsic(req, res);
