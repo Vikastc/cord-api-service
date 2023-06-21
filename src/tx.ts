@@ -43,7 +43,7 @@ export async function txStreamBench(
         const data = req.body;
 
         const extrinsic = api.tx(data.extrinsic);
-        const signedAndSubmited = extrinsic.signAndSend(authorIdentity);
+        const signedAndSubmited = await extrinsic.signAndSend(authorIdentity);
 
         return res.json({ signedAndSubmited });
     } catch (error) {
