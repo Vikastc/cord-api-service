@@ -1,7 +1,7 @@
 import express from 'express';
 
 import { setupDidAndIdentities } from './init';
-import { app, server } from './server';
+import { app, server, userTokenAuth } from './server';
 import { authSignup, authSubmit, authLoginCheck } from './auth_controller';
 import { postExtrinsic, query, queryIdentifiers } from './cord';
 
@@ -23,15 +23,19 @@ authRouter.get('/check', async (req, res) => {
 
 app.use('/api/v1/auth', authRouter);
 
-app.post('/api/v1/:module/extrinsic', async (req, res) => {
+app.post('/api/v1/:module/extrinsic', userTokenAuth, async (req, res) => {
     /* TODO: authentication check */
     /* TODO: add metering */
     return await postExtrinsic(req, res);
 });
 
-app.get('/api/v1/query/:module/:section/:identifier', async (req, res) => {
-    return await query(req, res);
-});
+app.get(
+    '/api/v1/query/:module/:section/:identifier',
+    userTokenAuth,
+    async (req, res) => {
+        return await query(req, res);
+    }
+);
 
 app.get('/api/v1/query/:identifier', async (req, res) => {
     /* TODO: authentication check */

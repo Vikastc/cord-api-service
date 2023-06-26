@@ -9,13 +9,13 @@ const { AGENT_URL } = process.env;
 
 export async function isLoggedIn(req: express.Request) {
     if (req.session && req.session.did) {
-       	return { login: true, session: req.session }	
+        return { login: true, session: req.session };
     }
-    return { login: false, message: 'Scan the QR from your dhi-wallet'};
+    return { login: false, message: 'Scan the QR from your dhi-wallet' };
 }
 
 export async function authLogout(req: express.Request, res: express.Response) {
-    res.json({ error: 'function not implemented'});
+    res.json({ error: 'function not implemented' });
 }
 
 export async function authLoginCheck(
@@ -27,68 +27,62 @@ export async function authLoginCheck(
     return res.json(response);
 }
 
-
-export async function authSignup(
-    req: express.Request,
-    res: express.Response
-) {
+export async function authSignup(req: express.Request, res: express.Response) {
     const response = await isLoggedIn(req);
     if (response.login) {
-       return res.json({error: "User already logged in"});
+        return res.json({ error: 'User already logged in' });
     }
     const details = {
         endpoint: `${AGENT_URL}/api/v1/auth/submit`,
         challenge: req.sessionID,
-	fields: ["name", "email"]
-    }
+        fields: ['name', 'email'],
+    };
     const qrStr = JSON.stringify(details);
 
     res.json({
         login: details,
-	qrStr,
-        qr: `https://hashcodedemo.dhiway.com/?text=cord://${qrStr}`
+        qrStr,
+        qr: `https://hashcodedemo.dhiway.com/?text=cord://${qrStr}`,
     });
 
     return true;
 }
 
-
 async function verifyCall(presentation: any, challenge: string) {
     try {
         // Verify the presentation with the provided challenge.
-        await Cord.Document.verifyPresentation(presentation, { challenge })
+        await Cord.Document.verifyPresentation(presentation, { challenge });
 
         // Verify the credential by checking the stream on the blockchain.
-        const api = Cord.ConfigService.get('api')
-        const chainIdentifier = Cord.Stream.idToChain(presentation.identifier)
-        const streamOnChain = await api.query.stream.streams(chainIdentifier)
-        const stream = Cord.Stream.fromChain(streamOnChain, chainIdentifier)
+        const api = Cord.ConfigService.get('api');
+        const chainIdentifier = Cord.Stream.idToChain(presentation.identifier);
+        const streamOnChain = await api.query.stream.streams(chainIdentifier);
+        const stream = Cord.Stream.fromChain(streamOnChain, chainIdentifier);
         if (stream.revoked) {
-	    console.log("Revoked");
-            return null
+            console.log('Revoked');
+            return null;
         }
-	console.log("Stream: ", stream);
+        console.log('Stream: ', stream);
         return stream;
     } catch (err: any) {
-        console.log("Error: ", err);
+        console.log('Error: ', err);
         return null;
     }
 }
-    
-export async function authSubmit(
-    req: express.Request,
-    res: express.Response
-) {
+
+export async function authSubmit(req: express.Request, res: express.Response) {
     const data = req.body;
 
     const presentation = data.presentation;
     const challenge = data.challenge;
     if (!presentation || !challenge) {
-       console.log("no presentation or challenge");
-	return res.status(400).json({error: 'send presentation and challenge'})
+        console.log('no presentation or challenge');
+        return res
+            .status(400)
+            .json({ error: 'send presentation and challenge' });
     }
     const result = await verifyCall(presentation, challenge);
-    console.log("verification: ", result);
+    console.log('verification: ', result);
     if (result) {
         try {
             sessionStore.get(challenge, (err: any, session: any) => {
@@ -100,24 +94,42 @@ export async function authSubmit(
                     res.status(500).json({ error: err });
                     return;
                 }
-		if (session.did) {
-		    res.status(400).json({ error: 'already logged in' });
-		    return;
-		}
+                if (session.did) {
+                    res.status(400).json({ error: 'already logged in' });
+                    return;
+                }
                 session.did = result.issuer ?? 'did:cord:<undefined>';
-		session.email = presentation?.content?.contents?.email ?? 'something@wrong.com';
-		session.name = presentation?.content?.contents?.name ?? 'Anonymous / Guest';
+                session.email =
+                    presentation?.content?.contents?.email ??
+                    'something@wrong.com';
+                session.name =
+                    presentation?.content?.contents?.name ??
+                    'Anonymous / Guest';
                 sessionStore.set(challenge, session, (err: any) => {
                     if (err) {
                         res.status(500).json({ error: err });
                         return;
                     }
                 });
-		io.in(challenge).emit('login', session);
+                io.in(challenge).emit('login', session);
             });
         } catch (err) {
             return res.status(500).json({ error: err });
         }
     }
     return true;
+}
+
+export async function fetchToken(req: express.Request, res: express.Response) {
+    const authHeader = req.header('Authorization');
+
+    if (!authHeader) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const [authType, authToken] = authHeader.split(' ');
+
+    if (authType === 'Bearer') {
+        return authToken;
+    }
 }

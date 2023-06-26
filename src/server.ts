@@ -6,6 +6,8 @@ import bodyParser from 'body-parser';
 import sharedSession from 'express-socket.io-session';
 import cors from 'cors';
 import sessionfile from 'session-file-store';
+import { fetchToken } from './auth_controller';
+import { error } from 'console';
 
 const FileStore = sessionfile(session);
 const app = express();
@@ -68,7 +70,7 @@ app.use(
             'X-Content-Type-Options',
             'Content-Security-Policy',
             'X-Frame-Options',
-            'Strict-Transport-Security'
+            'Strict-Transport-Security',
         ],
     })
 );
@@ -99,9 +101,9 @@ const sess = session({
 
 declare module 'express-session' {
     interface SessionData {
-       name: string,
-       did: string,
-       email: string
+        name: string;
+        did: string;
+        email: string;
     }
 }
 
@@ -117,6 +119,19 @@ app.use(function (req, res, next) {
     }
     return next();
 });
+
+export async function userTokenAuth(
+    req: express.Request,
+    res: express.Response,
+    next: any
+) {
+    const token = await fetchToken(req, res);
+
+    if (token !== 'testToken') {
+        return next(error);
+    }
+    return next();
+}
 
 export function numberOfSessions() {
     return sessionCount;
